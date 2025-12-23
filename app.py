@@ -1,89 +1,73 @@
-# save as app.py
-
 import streamlit as st
 import torch
-from tokenizers import ByteLevelBPETokenizer
-import os
+from model import ShakespeareGPT
+from generate import generate
+from config import CHECKPOINT_PATH, device
 
 # -----------------------------
-# CONFIG
+# PAGE CONFIG
 # -----------------------------
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
-# Paths
-MODEL_PATH = "gpt_shakespeare.pt"
-TOKENIZER_DIR = "tokenizer"  # folder containing vocab.json & merges.txt
-
-# -----------------------------
-# LOAD TOKENIZER
-# -----------------------------
-tokenizer = ByteLevelBPETokenizer(
-    os.path.join(TOKENIZER_DIR, "vocab.json"),
-    os.path.join(TOKENIZER_DIR, "merges.txt")
+st.set_page_config(
+    page_title="Shakespeare GPT",
+    page_icon="🖋️",
+    layout="centered"
 )
-vocab_size = tokenizer.get_vocab_size()
 
 # -----------------------------
-# DEFINE MODEL
+# HEADER (TITLE LEFT, LOGO RIGHT)
 # -----------------------------
-import torch.nn as nn
+col_title, col_logo = st.columns([5, 2])
 
-class MiniGPT(nn.Module):
-    def __init__(self, vocab_size, embed_dim):
-        super().__init__()
-        self.token_emb = nn.Embedding(vocab_size, embed_dim)
-        self.lm_head = nn.Linear(embed_dim, vocab_size)
+with col_title:
+    st.markdown("## 🖋️ Shakespeare GPT")
+    st.caption("Because sanity is overrated.")
 
-    def forward(self, x):
-        x = self.token_emb(x)
-        logits = self.lm_head(x)
-        return logits
-
+with col_logo:
+    # slightly bigger logo
+    st.image("imgs/pattern.png", width=170)
 
 # -----------------------------
-# LOAD MODEL
+# LOAD CHECKPOINT
 # -----------------------------
-model = MiniGPT(vocab_size, embed_dim=256)
-# model = MiniGPTWithAttention(vocab_size).to(device)
-model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
+checkpoint = torch.load(CHECKPOINT_PATH, map_location=device)
+
+model = ShakespeareGPT(
+    vocab_size=checkpoint["vocab_size"],
+    **checkpoint["config"]
+).to(device)
+
+model.load_state_dict(checkpoint["model_state"])
 model.eval()
 
 # -----------------------------
-# TEXT GENERATION FUNCTION
+# USER INPUT
 # -----------------------------
-def generate(prompt, max_new_tokens=200, temperature=0.7):
-    model.eval()
-    ids = [i if i < vocab_size else tokenizer.token_to_id("<unk>") for i in tokenizer.encode(prompt).ids]
-    x = torch.tensor(ids, dtype=torch.long).unsqueeze(0).to(device)
-
-    for _ in range(max_new_tokens):
-        logits = model(x)
-        logits = logits[:, -1, :] / temperature
-        probs = torch.softmax(logits, dim=-1)
-        next_id = torch.multinomial(probs, 1)
-        x = torch.cat((x, next_id), dim=1)
-
-    return tokenizer.decode(x[0].tolist())
-
+prompt = st.text_area("Prompt", "HAMLET:\n", height=120)
+tokens = st.slider("Max tokens", 100, 800, 400)
+temp = st.slider("Temperature", 0.3, 1.2, 0.7)
 
 # -----------------------------
-# STREAMLIT UI
+# GENERATION
 # -----------------------------
-st.set_page_config(page_title="Shakespeare GPT", page_icon="🖋️", layout="centered")
+if st.button("Shake the Pear"):
+    st.text(generate(
+        model,
+        checkpoint["stoi"],
+        checkpoint["itos"],
+        checkpoint["config"]["block_size"],
+        prompt,
+        tokens,
+        temp
+    ))
 
-st.title("🖋️ Shakespeare GPT")
-st.write("Enter a prompt and let the model generate Shakespearean text!")
-
-prompt = st.text_area("Enter your prompt:", "To be, or not to be", height=100)
-max_tokens = st.slider("Max tokens to generate:", min_value=50, max_value=500, value=200, step=10)
-temperature = st.slider("Temperature (creativity):", min_value=0.1, max_value=1.2, value=0.7, step=0.05)
-
-if st.button("Generate"):
-    with st.spinner("Generating..."):
-        try:
-            output = generate(prompt, max_new_tokens=max_tokens, temperature=temperature)
-            st.subheader("Generated Text:")
-            st.write(output)
-        except Exception as e:
-            st.error(f"Error: {e}")
-
+# -----------------------------
+# FOOTER (TEXT ONLY)
+# -----------------------------
+st.markdown("---")
+st.markdown(
+    """
+    **Built by:** Danish Talpur  
+    **License:** MIT  
+    **Email:** danishshuja11@gmail.com
+    """
+)
