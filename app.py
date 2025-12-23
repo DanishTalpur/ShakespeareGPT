@@ -42,7 +42,7 @@ model.eval()
 # -----------------------------
 # USER INPUT
 # -----------------------------
-prompt = st.text_area("Prompt", "HAMLET:\n", height=120)
+prompt = st.text_area("Prompt", "To be or not be\n", height=120)
 tokens = st.slider("Max tokens", 100, 800, 400)
 temp = st.slider("Temperature", 0.3, 1.2, 0.7)
 
