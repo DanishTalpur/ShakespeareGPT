@@ -36,17 +36,16 @@ vocab.json # BPE tokenizer vocab
 ```bash
 git clone https://github.com/yourusername/shakespeare-gpt.git
 cd shakespeare-gpt
-'''
-
+```
 
 ### 2. Install dependencies
-
+```bash
 pip install -r requirements.txt
+```
 
 ### 3. Run locally
-'''bash
+```bash
 streamlit run gui.py
+```
 Opened automatically in your browser.
-'''
-
 Enter a prompt, adjust max tokens and temperature, and click Generate.
