@@ -55,7 +55,7 @@ if st.button("Shake the Pear"):
 st.markdown("---")
 st.markdown(
     """
-    **Built by:** Danish Talpur, Aun Naqvi 
+    **Built by:** Danish Talpur, Aun Naqvi    
     **License:** MIT  
     **Email:** danishshuja11@gmail.com
     """
